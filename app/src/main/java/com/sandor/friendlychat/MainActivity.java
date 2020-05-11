@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int RC_SIGN_IN = 1;
     private static final int RC_PHOTO_PICKER =  2;
 
+
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
     private ProgressBar mProgressBar;
@@ -141,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+
 
         mAuthStateListener = new FirebaseAuth.AuthStateListener() {
             @Override
