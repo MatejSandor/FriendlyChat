@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -21,6 +22,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -172,18 +174,27 @@ public class MainActivity extends AppCompatActivity {
             } else if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(MainActivity.this, "Sign in cancelled", Toast.LENGTH_SHORT).show();
                 finish();
-            } else if (resultCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
+            } else if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
                 Uri selectedImageUri = data.getData();
+
+                // Get a reference to store file at chat_photos/<FILENAME>
                 StorageReference photoRef =
                         mChatPhotosStorageReference.child(selectedImageUri.getLastPathSegment());
 
-                photoRef.putFile(selectedImageUri).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                        // When the image has successfully uploaded, we get its download URL
-                        String downloadUrl = taskSnapshot.getMetadata().getReference().getDownloadUrl().toString();
+                UploadTask uploadTask = photoRef.putFile(selectedImageUri);
 
-                        // Set the download URL to the message box, so that the user can send it to the database
-                        FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadUrl);
+                uploadTask.addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d(TAG,"Unsuccessful upload");
+                    }
+                }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                        String downloadUrl = taskSnapshot.getMetadata().getReference().getDownloadUrl().toString();
+                        assert downloadUrl != null;
+                        FriendlyMessage friendlyMessage =
+                                new FriendlyMessage(null, mUsername, downloadUrl);
                         mMessagesDatabaseReference.push().setValue(friendlyMessage);
                     }
                 });
