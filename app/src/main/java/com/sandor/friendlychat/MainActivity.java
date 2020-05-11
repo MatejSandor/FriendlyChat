@@ -181,6 +181,8 @@ public class MainActivity extends AppCompatActivity {
         defaultConfigMap.put(FRIENDLY_MSG_LENGTH_KEY, DEFAULT_MSG_LENGTH_LIMIT);
         mFirebaseRemoteConfig.setDefaults(defaultConfigMap);
 
+        fetchConfig();
+
     }
 
 
@@ -299,5 +301,48 @@ public class MainActivity extends AppCompatActivity {
         mUsername = ANONYMOUS;
         mMessageAdapter.clear();
         detachDatabaseReadListener();
+    }
+
+    public void fetchConfig() {
+        long cacheExpiration = 3600; // 1 hour in seconds
+        // If developer mode is enabled reduce cacheExpiration to 0 so that each fetch goes to the
+        // server. This should not be used in release builds.
+        if (mFirebaseRemoteConfig.getInfo().getConfigSettings().isDeveloperModeEnabled()) {
+            cacheExpiration = 0;
+        }
+        mFirebaseRemoteConfig.fetch(cacheExpiration)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        // Make the fetched config available
+                        // via FirebaseRemoteConfig get<type> calls, e.g., getLong, getString.
+                        mFirebaseRemoteConfig.activateFetched();
+
+                        // Update the EditText length limit with
+                        // the newly retrieved values from Remote Config.
+                        applyRetrievedLengthLimit();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // An error occurred when fetching the config.
+                        Log.w(TAG, "Error fetching config", e);
+
+                        // Update the EditText length limit with
+                        // the newly retrieved values from Remote Config.
+                        applyRetrievedLengthLimit();
+                    }
+                });
+    }
+
+    /**
+     * Apply retrieved length limit to edit text field. This result may be fresh from the server or it may be from
+     * cached values.
+     */
+    private void applyRetrievedLengthLimit() {
+        Long friendly_msg_length = mFirebaseRemoteConfig.getLong(FRIENDLY_MSG_LENGTH_KEY);
+        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(friendly_msg_length.intValue())});
+        Log.d(TAG, FRIENDLY_MSG_LENGTH_KEY + " = " + friendly_msg_length);
     }
 }
